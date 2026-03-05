@@ -24,7 +24,19 @@ int main(int argc, char* argv[]) {
     std::signal(SIGTERM, signal_handler);
 
     int         port    = 8080;
-    std::string db_conn = "host=localhost dbname=pilot_db user=pilot password=pilot";
+    // DB credentials loaded from environment variables or --db CLI flag.
+    // Defaults use standard PostgreSQL env-var names as a fallback.
+    const char* pg_host = std::getenv("PGHOST");
+    const char* pg_db   = std::getenv("PGDATABASE");
+    const char* pg_user = std::getenv("PGUSER");
+    const char* pg_pass = std::getenv("PGPASSWORD");
+    std::string db_conn;
+    if (pg_host || pg_db || pg_user) {
+        if (pg_host) db_conn += std::string("host=")     + pg_host + " ";
+        if (pg_db)   db_conn += std::string("dbname=")   + pg_db   + " ";
+        if (pg_user) db_conn += std::string("user=")     + pg_user + " ";
+        if (pg_pass) db_conn += std::string("password=") + pg_pass + " ";
+    }
 
     for (int i = 1; i < argc - 1; ++i) {
         if (std::string(argv[i]) == "--port") {

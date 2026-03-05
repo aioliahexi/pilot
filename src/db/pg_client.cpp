@@ -100,6 +100,7 @@ bool PgClient::execute(const std::string& sql) {
 std::string PgClient::escape_string(const std::string& s) {
 #ifdef PILOT_HAVE_POSTGRESQL
     if (!conn_) return s;
+    // PQescapeStringConn writes at most 2*len+1 bytes; allocate exactly that.
     std::string result(s.size() * 2 + 1, '\0');
     int error = 0;
     std::size_t len = PQescapeStringConn(conn_, &result[0], s.c_str(), s.size(), &error);
@@ -107,9 +108,9 @@ std::string PgClient::escape_string(const std::string& s) {
     result.resize(len);
     return result;
 #else
-    // Simple escaping without libpq
+    // Simple escaping without libpq: only single-quotes need doubling.
     std::string result;
-    result.reserve(s.size());
+    result.reserve(s.size());  // Reserve original size; grow only if quotes found.
     for (char c : s) {
         if (c == '\'') result += "''";
         else           result += c;

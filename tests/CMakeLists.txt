@@ -24,7 +24,6 @@ foreach(test_src ${TEST_SOURCES})
     target_link_libraries(${test_name} PRIVATE
         pilot_core
         GTest::gtest_main
-        GTest::gmock_main
     )
     target_compile_features(${test_name} PRIVATE cxx_std_17)
     gtest_discover_tests(${test_name})

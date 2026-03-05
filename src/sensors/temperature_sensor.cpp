@@ -14,7 +14,7 @@ std::optional<SensorReading> TemperatureSensor::read() {
     SensorReading r;
     r.timestamp = std::chrono::system_clock::now();
     r.value     = base_temp_ + noise_(rng_);
-    r.unit      = "\xC2\xB0""C"; // UTF-8 °C
+    r.unit      = u8"°C";
     r.sensor_id = id_;
     return r;
 }
