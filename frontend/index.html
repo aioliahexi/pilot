@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pilot – Vehicle Data Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+        crossorigin="anonymous"></script>
+    <!-- NOTE: Add integrity="sha256-<hash>" above after verifying SRI hash
+         from https://www.srihash.org/ or by running:
+         openssl dgst -sha256 -binary chart.umd.min.js | openssl base64 -->
+<style>
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --border:   #30363d;
+    --accent:   #58a6ff;
+    --green:    #3fb950;
+    --yellow:   #d29922;
+    --red:      #f85149;
+    --text:     #c9d1d9;
+    --muted:    #8b949e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  header h1 { font-size: 1.4rem; color: var(--accent); }
+  #conn-status {
+    margin-left: auto;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    background: var(--border);
+  }
+  #conn-status.connected    { background: #1e3a2f; color: var(--green); }
+  #conn-status.disconnected { background: #3a1e1e; color: var(--red); }
+
+  main { padding: 1.5rem 2rem; }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .mode-label { font-size: 0.9rem; color: var(--muted); }
+  .mode-buttons { display: flex; gap: 0.5rem; }
+  .mode-btn {
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .mode-btn:hover          { border-color: var(--accent); color: var(--accent); }
+  .mode-btn.active         { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 600; }
+
+  .status-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.85rem;
+    margin-left: auto;
+  }
+  .status-card span { color: var(--muted); }
+  .status-card strong { color: var(--text); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.25rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+  }
+  .card-title { font-size: 0.95rem; font-weight: 600; }
+  .card-value { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+  .card-unit  { font-size: 0.75rem; color: var(--muted); margin-left: 0.2rem; }
+  canvas { width: 100% !important; }
+
+  .conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .cond-badge {
+    padding: 0.25rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    background: #1e3a2f;
+    color: var(--green);
+    border: 1px solid #2d5a3d;
+  }
+  .cond-badge.triggered {
+    background: #3a1e1e;
+    color: var(--red);
+    border-color: #6b2d2d;
+  }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding: 2rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Pilot Dashboard</h1>
+  <span id="conn-status" class="disconnected">Disconnected</span>
+</header>
+<main>
+  <div class="top-bar">
+    <span class="mode-label">Vehicle Mode:</span>
+    <div class="mode-buttons">
+      <button class="mode-btn" data-mode="ECO">ECO</button>
+      <button class="mode-btn active" data-mode="NORMAL">NORMAL</button>
+      <button class="mode-btn" data-mode="SPORT">SPORT</button>
+      <button class="mode-btn" data-mode="CHARGE">CHARGE</button>
+    </div>
+    <div class="status-card">
+      <span>Max RPM: </span><strong id="s-max-rpm">–</strong>
+      &nbsp;|&nbsp;
+      <span>Power: </span><strong id="s-power">–</strong> <span>kW</span>
+      &nbsp;|&nbsp;
+      <span>Regen: </span><strong id="s-regen">–</strong>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🌡 Temperature</span>
+        <span><span class="card-value" id="val-temp_0">–</span><span class="card-unit">°C</span></span>
+      </div>
+      <canvas id="chart-temp_0" height="120"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">⚙️ Engine RPM</span>
+        <span><span class="card-value" id="val-rpm_0">–</span><span class="card-unit">RPM</span></span>
+      </div>
+      <canvas id="chart-rpm_0" height="120"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔋 Battery SOC</span>
+        <span><span class="card-value" id="val-soc_0">–</span><span class="card-unit">%</span></span>
+      </div>
+      <canvas id="chart-soc_0" height="120"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📐 IMU Accel Magnitude</span>
+        <span><span class="card-value" id="val-imu_0">–</span><span class="card-unit">m/s²</span></span>
+      </div>
+      <canvas id="chart-imu_0" height="120"></canvas>
+    </div>
+  </div>
+
+  <div class="conditions" id="conditions-panel"></div>
+</main>
+<footer>Pilot Vehicle Data Platform &mdash; Real-time sensor monitoring</footer>
+
+<script>
+const MAX_POINTS = 60;
+const COLORS = {
+  temp_0: '#f85149',
+  rpm_0:  '#58a6ff',
+  soc_0:  '#3fb950',
+  imu_0:  '#d2992a',
+};
+
+const charts = {};
+const buffers = {};
+
+function makeChart(id) {
+  const ctx = document.getElementById('chart-' + id).getContext('2d');
+  buffers[id] = { labels: [], data: [] };
+  charts[id] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: buffers[id].labels,
+      datasets: [{
+        data: buffers[id].data,
+        borderColor: COLORS[id] || '#58a6ff',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: { target: 'origin', above: (COLORS[id] || '#58a6ff') + '18' }
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          grid: { color: '#21262d' },
+          ticks: { color: '#8b949e', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+['temp_0', 'rpm_0', 'soc_0', 'imu_0'].forEach(makeChart);
+
+function pushPoint(sensorId, value, time) {
+  const b = buffers[sensorId];
+  if (!b) return;
+  b.labels.push(time);
+  b.data.push(parseFloat(value.toFixed(2)));
+  if (b.labels.length > MAX_POINTS) { b.labels.shift(); b.data.shift(); }
+  charts[sensorId].update('none');
+  const el = document.getElementById('val-' + sensorId);
+  if (el) el.textContent = value.toFixed(1);
+}
+
+// SSE connection with auto-reconnect
+let sse = null;
+function connectSSE() {
+  const statusEl = document.getElementById('conn-status');
+  sse = new EventSource('/events');
+  sse.addEventListener('sensor_data', e => {
+    const d = JSON.parse(e.data);
+    const t = new Date(d.timestamp).toLocaleTimeString();
+    pushPoint(d.sensor_id, d.value, t);
+  });
+  sse.onopen = () => {
+    statusEl.textContent = 'Connected';
+    statusEl.className = 'connected';
+  };
+  sse.onerror = () => {
+    statusEl.textContent = 'Reconnecting…';
+    statusEl.className = 'disconnected';
+    sse.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+connectSSE();
+
+// Poll conditions every 2 s
+async function pollConditions() {
+  try {
+    const r = await fetch('/api/conditions');
+    const data = await r.json();
+    const panel = document.getElementById('conditions-panel');
+    panel.innerHTML = '';
+    for (const [name, state] of Object.entries(data)) {
+      const badge = document.createElement('span');
+      badge.className = 'cond-badge' + (state ? ' triggered' : '');
+      badge.textContent = (state ? '⚠ ' : '✓ ') + name;
+      panel.appendChild(badge);
+    }
+  } catch (_) {}
+}
+setInterval(pollConditions, 2000);
+pollConditions();
+
+// Poll profile every 3 s
+async function pollProfile() {
+  try {
+    const r = await fetch('/api/profile');
+    const d = await r.json();
+    document.getElementById('s-max-rpm').textContent = d.max_rpm ?? '–';
+    document.getElementById('s-power').textContent   = d.power_limit ?? '–';
+    document.getElementById('s-regen').textContent   = d.regen_brake_level != null
+      ? (d.regen_brake_level * 100).toFixed(0) + '%' : '–';
+    // Highlight active mode button
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === d.mode);
+    });
+  } catch (_) {}
+}
+setInterval(pollProfile, 3000);
+pollProfile();
+
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: btn.dataset.mode })
+    });
+    pollProfile();
+  });
+});
+</script>
+</body>
+</html>
