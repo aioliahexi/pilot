@@ -1,0 +1,65 @@
+{
+    "device": {
+        "id": "uuv-001",
+        "name": "UUV Alpha",
+        "type": "UUV",
+        "description": "Unmanned Underwater Vehicle main controller"
+    },
+    "server": {
+        "port": 8080,
+        "host": "0.0.0.0"
+    },
+    "database": {
+        "host": "localhost",
+        "port": 5432,
+        "name": "pilot_db",
+        "user": "pilot",
+        "password": "pilot",
+        "connection_string": ""
+    },
+    "sensors": {
+        "poll_interval_ms": 200,
+        "buffer_size": 1024,
+        "condition_window_seconds": 10,
+        "gps": {
+            "id": "gps_0",
+            "enabled": true
+        },
+        "imu": {
+            "id": "imu_0",
+            "enabled": true,
+            "accel_noise_stddev": 0.05,
+            "gyro_noise_stddev": 0.1
+        },
+        "depth": {
+            "id": "depth_0",
+            "enabled": true
+        },
+        "dvl": {
+            "id": "dvl_0",
+            "enabled": true
+        },
+        "thrusters": [
+            { "id": "thruster_0", "enabled": true, "base_rpm": 3000.0 },
+            { "id": "thruster_1", "enabled": true, "base_rpm": 3000.0 }
+        ],
+        "battery_soc": {
+            "id": "soc_0",
+            "enabled": true,
+            "initial_soc": 75.0,
+            "discharge_rate": 0.05,
+            "charge_rate": 0.10
+        },
+        "temperature": {
+            "id": "temp_0",
+            "enabled": true,
+            "base_temp": 85.0,
+            "noise_stddev": 0.5
+        }
+    },
+    "control": {
+        "default_mode": "NORMAL",
+        "soc_low_threshold": 10.0,
+        "main_loop_interval_ms": 100
+    }
+}
