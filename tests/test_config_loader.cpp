@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "config/config_loader.h"
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <fstream>
 #include <cstdio>
 
@@ -88,7 +89,8 @@ TEST(ConfigLoaderTest, OverridesFromJson) {
 
 TEST(ConfigLoaderTest, LoadFromFile) {
     // Write a temporary JSON config file
-    std::string tmpfile = "/tmp/test_pilot_config.json";
+    auto tmpdir = std::filesystem::temp_directory_path();
+    std::string tmpfile = (tmpdir / "test_pilot_config.json").string();
     {
         json j = {
             {"server", {{"port", 7777}}},
@@ -106,7 +108,9 @@ TEST(ConfigLoaderTest, LoadFromFile) {
 }
 
 TEST(ConfigLoaderTest, LoadFromFileMissingThrows) {
-    EXPECT_THROW(load_config("/tmp/nonexistent_config.json"), std::runtime_error);
+    auto tmpdir = std::filesystem::temp_directory_path();
+    std::string missing = (tmpdir / "nonexistent_pilot_config.json").string();
+    EXPECT_THROW(load_config(missing), std::runtime_error);
 }
 
 TEST(ConfigLoaderTest, PartialSensorConfig) {
