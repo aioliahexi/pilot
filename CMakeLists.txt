@@ -40,6 +40,7 @@ file(GLOB_RECURSE PILOT_SOURCES
     src/control/*.cpp
     src/db/*.cpp
     src/server/*.cpp
+    src/config/*.cpp
 )
 
 # Core library used by both the main executable and tests

@@ -15,6 +15,7 @@ set(TEST_SOURCES
     test_sliding_window.cpp
     test_condition_engine.cpp
     test_vehicle_profile.cpp
+    test_config_loader.cpp
 )
 
 foreach(test_src ${TEST_SOURCES})

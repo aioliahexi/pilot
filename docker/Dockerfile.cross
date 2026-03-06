@@ -1,0 +1,41 @@
+# =============================================================================
+# Dockerfile for x86_64 cross-compilation to ARM64 (aarch64)
+# =============================================================================
+# Builds an ARM64 binary from an x86_64 host using a cross-compiler toolchain.
+#
+#   docker build -f docker/Dockerfile.cross -t pilot:cross-arm64 .
+# =============================================================================
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install cross-compilation toolchain and dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    ca-certificates \
+    crossbuild-essential-arm64 \
+    libpq-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add arm64 architecture for cross-compilation library resolution
+RUN dpkg --add-architecture arm64 \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY . .
+COPY docker/toolchain-aarch64.cmake /build/toolchain-aarch64.cmake
+
+RUN cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_TOOLCHAIN_FILE=/build/toolchain-aarch64.cmake \
+    && cmake --build build --parallel $(nproc)
+
+# ---------------------------------------------------------------------------
+# Output stage: Extract the compiled binary
+# ---------------------------------------------------------------------------
+FROM scratch AS export
+COPY --from=builder /build/build/pilot_server /pilot_server
