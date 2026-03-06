@@ -1,0 +1,56 @@
+# =============================================================================
+# Docker Compose for Pilot UUV Platform
+# =============================================================================
+# Runs the full stack: PostgreSQL 17 with PostGIS + Pilot application.
+#
+#   docker compose up -d
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 17 with PostGIS
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: pilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pilot_db
+      POSTGRES_USER: pilot
+      POSTGRES_PASSWORD: pilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/000_init.sql:/docker-entrypoint-initdb.d/000_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pilot -d pilot_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Pilot Application
+  # ---------------------------------------------------------------------------
+  pilot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.arm64
+    container_name: pilot-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - ./frontend:/app/frontend:ro
+    environment:
+      PGHOST: postgres
+      PGDATABASE: pilot_db
+      PGUSER: pilot
+      PGPASSWORD: pilot
+
+volumes:
+  pgdata:
